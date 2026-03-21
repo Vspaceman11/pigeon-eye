@@ -160,7 +160,7 @@ The `domain` must be the issuer URL of the JWT provider. Convex fetches `{domain
 ```tsx
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+const convex = new ConvexReactClient(process.env.CONVEX_URL!);
 
 function App({ children }: { children: React.ReactNode }) {
   return (

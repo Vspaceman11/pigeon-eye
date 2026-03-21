@@ -2,18 +2,15 @@
 
 import dynamic from 'next/dynamic'
 import { forwardRef } from 'react'
-import type { TaskMapHandle } from './task-map-inner'
-import type { Task } from '@/lib/task-store'
+import type { TaskMapHandle, MapIssue } from './task-map-inner'
 
-export type { TaskMapHandle }
+export type { TaskMapHandle, MapIssue }
 
 interface TaskMapProps {
-  tasks: Task[]
-  onTaskClick?: (task: Task) => void
+  tasks: MapIssue[]
+  onTaskClick?: (id: string) => void
 }
 
-// Dynamically import the inner map (which imports Leaflet) with SSR disabled.
-// This is required for Turbopack compatibility — CSS imports inside require() are not supported.
 const TaskMapDynamic = dynamic(
   () => import('./task-map-inner').then((m) => m.TaskMapInner),
   {

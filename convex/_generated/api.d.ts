@@ -8,11 +8,10 @@
  * @module
  */
 
-<<<<<<< HEAD
+import type * as coupons from "../coupons.js";
 import type * as http from "../http.js";
-=======
->>>>>>> front-01
 import type * as issues from "../issues.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -21,11 +20,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-<<<<<<< HEAD
+  coupons: typeof coupons;
   http: typeof http;
-=======
->>>>>>> front-01
   issues: typeof issues;
+  users: typeof users;
 }>;
 
 /**

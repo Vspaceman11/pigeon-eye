@@ -31,19 +31,48 @@
     "title": "Report Issue",
     "takePhoto": "Take Photo",
     "retakePhoto": "Retake Photo",
+    "addPhoto": "Add Photo",
+    "usePhoto": "Use Photo",
+    "camera": "Camera",
+    "upload": "Upload",
+    "capture": "Capture",
     "analyzing": "AI is analyzing the image…",
+    "analysisPending": "The photo will be analyzed by AI after upload",
+    "analysisAutomatic": "Results will appear here automatically",
+    "analysisFailed": "Analysis failed",
+    "retryAnalysis": "Retry analysis",
+    "safetyConcern": "Safety concern detected",
     "category": "Category",
     "severity": "Severity",
     "description": "Description",
     "descriptionPlaceholder": "Describe the issue…",
+    "descriptionOptional": "Description (optional)",
     "location": "Location",
     "locationAuto": "Detected automatically",
+    "locationGetting": "Getting location…",
     "submitReport": "Submit Report",
+    "uploading": "Uploading…",
     "submitting": "Submitting…",
     "success": "Report created successfully!",
     "cameraError": "Could not start camera",
+    "cameraNotAvailable": "Camera not available. Please use file upload.",
     "cameraPermission": "Please allow camera access",
-    "offlineSaved": "Saved offline — will sync"
+    "offlineSaved": "Saved offline — will sync",
+    "photoAttached": "Photo attached",
+    "aiAnalysis": "AI Analysis",
+    "aiDescription": "AI Description"
+  },
+  "issueDetail": {
+    "title": "Issue Details",
+    "notFound": "Issue not found",
+    "goBack": "Go back",
+    "pending": "Pending",
+    "analyzing": "Analyzing…",
+    "done": "Done",
+    "error": "Error",
+    "priority": "Priority",
+    "userDescription": "User Description",
+    "created": "Created"
   },
   "voice": {
     "thankYou": "Thank you, citizen! Your report has been recorded."
@@ -58,10 +87,18 @@
   "profile": {
     "title": "Profile",
     "myReports": "My Reports",
+    "recentReports": "Recent Reports",
+    "noReports": "No reports yet",
     "totalPoints": "Total Points",
     "memberSince": "Member since",
     "signIn": "Sign In",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "logOut": "Log Out",
+    "statsDone": "Done",
+    "statsAnalyzing": "Analyzing",
+    "statsErrors": "Errors"
   },
   "categories": {
     "pothole": "Pothole",
@@ -70,7 +107,8 @@
     "trash": "Trash",
     "vegetation": "Vegetation",
     "infrastructure": "Infrastructure",
-    "other": "Other"
+    "other": "Other",
+    "pendingAnalysis": "Pending analysis"
   },
   "status": {
     "open": "Open",

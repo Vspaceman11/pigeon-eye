@@ -107,7 +107,7 @@ my-app/
     schema.ts       # Database schema (if template includes one)
   src/              # Frontend code (or app/ for Next.js)
   package.json
-  .env.local        # CONVEX_URL / VITE_CONVEX_URL / NEXT_PUBLIC_CONVEX_URL
+  .env.local        # CONVEX_URL / VITE_CONVEX_URL / CONVEX_URL
 ```
 
 The template already has:
@@ -181,7 +181,7 @@ createRoot(document.getElementById("root")!).render(
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { ReactNode } from "react";
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+const convex = new ConvexReactClient(process.env.CONVEX_URL!);
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
   return <ConvexProvider client={convex}>{children}</ConvexProvider>;
@@ -221,7 +221,7 @@ The env var name depends on the framework:
 | Framework | Variable |
 |-----------|----------|
 | Vite | `VITE_CONVEX_URL` |
-| Next.js | `NEXT_PUBLIC_CONVEX_URL` |
+| Next.js | `CONVEX_URL` |
 | Remix | `CONVEX_URL` |
 | React Native | `EXPO_PUBLIC_CONVEX_URL` |
 

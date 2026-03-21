@@ -15,7 +15,7 @@ Mobile-first app: map, photo, reporting. **Business logic and AI run in n8n**; *
 ```bash
 npm install
 cp .env.example .env.local
-# Set NEXT_PUBLIC_CONVEX_URL and ISSUES_INGEST_SECRET (also in Convex Dashboard)
+# Set CONVEX_URL and ISSUES_INGEST_SECRET (also in Convex Dashboard)
 
 npx convex dev
 npm run dev
@@ -25,7 +25,7 @@ npm run dev
 
 | Variable | Where | Purpose |
 |----------|--------|---------|
-| `NEXT_PUBLIC_CONVEX_URL` | `.env.local` | Convex client (browser) |
+| `CONVEX_URL` | `.env.local` | Convex client (browser) |
 | `ISSUES_INGEST_SECRET` | Convex Dashboard **and** n8n HTTP node headers | `X-Webhook-Secret` on `POST …/api/issues` |
 
 n8n workflow should call your Convex Site URL, e.g. `https://<deployment>.convex.site/api/issues`, with the same secret the backend expects.

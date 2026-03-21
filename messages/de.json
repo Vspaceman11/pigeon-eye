@@ -31,19 +31,48 @@
     "title": "Problem melden",
     "takePhoto": "Foto aufnehmen",
     "retakePhoto": "Neues Foto",
+    "addPhoto": "Foto hinzufügen",
+    "usePhoto": "Foto verwenden",
+    "camera": "Kamera",
+    "upload": "Hochladen",
+    "capture": "Aufnehmen",
     "analyzing": "KI analysiert das Bild…",
+    "analysisPending": "Das Foto wird nach dem Hochladen von KI analysiert",
+    "analysisAutomatic": "Ergebnisse erscheinen hier automatisch",
+    "analysisFailed": "Analyse fehlgeschlagen",
+    "retryAnalysis": "Analyse wiederholen",
+    "safetyConcern": "Sicherheitsbedenken erkannt",
     "category": "Kategorie",
     "severity": "Schweregrad",
     "description": "Beschreibung",
     "descriptionPlaceholder": "Beschreibe das Problem…",
+    "descriptionOptional": "Beschreibung (optional)",
     "location": "Standort",
     "locationAuto": "Wird automatisch erkannt",
+    "locationGetting": "Standort wird ermittelt…",
     "submitReport": "Meldung absenden",
+    "uploading": "Wird hochgeladen…",
     "submitting": "Wird gesendet…",
     "success": "Meldung erfolgreich erstellt!",
     "cameraError": "Kamera konnte nicht gestartet werden",
+    "cameraNotAvailable": "Kamera nicht verfügbar. Bitte Datei hochladen.",
     "cameraPermission": "Bitte erlaube den Kamerazugriff",
-    "offlineSaved": "Offline gespeichert — wird synchronisiert"
+    "offlineSaved": "Offline gespeichert — wird synchronisiert",
+    "photoAttached": "Foto angehängt",
+    "aiAnalysis": "KI-Analyse",
+    "aiDescription": "KI-Beschreibung"
+  },
+  "issueDetail": {
+    "title": "Meldungsdetails",
+    "notFound": "Meldung nicht gefunden",
+    "goBack": "Zurück",
+    "pending": "Ausstehend",
+    "analyzing": "Wird analysiert…",
+    "done": "Fertig",
+    "error": "Fehler",
+    "priority": "Priorität",
+    "userDescription": "Benutzerbeschreibung",
+    "created": "Erstellt"
   },
   "voice": {
     "thankYou": "Dankeschön, Bürger! Ihre Meldung wurde erfasst."
@@ -58,10 +87,18 @@
   "profile": {
     "title": "Profil",
     "myReports": "Meine Meldungen",
+    "recentReports": "Letzte Meldungen",
+    "noReports": "Noch keine Meldungen",
     "totalPoints": "Gesamtpunkte",
     "memberSince": "Mitglied seit",
     "signIn": "Anmelden",
-    "signOut": "Abmelden"
+    "signOut": "Abmelden",
+    "settings": "Einstellungen",
+    "notifications": "Benachrichtigungen",
+    "logOut": "Abmelden",
+    "statsDone": "Fertig",
+    "statsAnalyzing": "Wird analysiert",
+    "statsErrors": "Fehler"
   },
   "categories": {
     "pothole": "Schlagloch",
@@ -70,7 +107,8 @@
     "trash": "Müll",
     "vegetation": "Vegetation",
     "infrastructure": "Infrastruktur",
-    "other": "Sonstiges"
+    "other": "Sonstiges",
+    "pendingAnalysis": "Analyse ausstehend"
   },
   "status": {
     "open": "Offen",

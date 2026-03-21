@@ -6,6 +6,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  env: {
+    CONVEX_URL: process.env.CONVEX_URL,
+  },
 }
 
 export default nextConfig
