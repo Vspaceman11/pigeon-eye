@@ -113,7 +113,7 @@ export const TaskMapInner = forwardRef<TaskMapHandle, TaskMapInnerProps>(
       }
 
       L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png',
         {
           attribution:
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -169,6 +169,12 @@ export const TaskMapInner = forwardRef<TaskMapHandle, TaskMapInnerProps>(
       })
     }, [tasks, onTaskClick])
 
-    return <div ref={mapContainerRef} className="h-full w-full" style={{ minHeight: '100%' }} />
+    return (
+      <div
+        ref={mapContainerRef}
+        className="task-map h-full w-full"
+        style={{ minHeight: '100%' }}
+      />
+    )
   },
 )
