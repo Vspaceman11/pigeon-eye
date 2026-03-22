@@ -168,10 +168,13 @@ function HomeContent() {
 
       {view === 'user' && (
         <UserProfile
-          issues={allIssues}
           onBack={() => {
             setView('map')
             router.replace('/')
+          }}
+          onIssueClick={(id) => {
+            setSelectedIssueId(id)
+            setView('issue-detail')
           }}
         />
       )}
