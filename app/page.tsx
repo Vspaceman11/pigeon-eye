@@ -55,6 +55,12 @@ function HomeContent() {
     setView('user')
   }, [searchParams, authLoading, isAuthenticated, router])
 
+  useEffect(() => {
+    const a = searchParams.get('auth')
+    if (a !== 'sign-in' && a !== 'sign-up') return
+    setView((v) => (v === 'user' ? 'map' : v))
+  }, [searchParams])
+
   const openProfileOrAuth = useCallback(() => {
     if (authLoading) return
     if (!isAuthenticated) {
@@ -67,6 +73,8 @@ function HomeContent() {
   const authParam = searchParams.get('auth')
   const showAuthOverlay =
     view === 'map' && (authParam === 'sign-in' || authParam === 'sign-up')
+
+  const showMapFloatingChrome = view === 'map' && !showAuthOverlay
 
   const closeAuthOverlay = useCallback(() => {
     const sp = new URLSearchParams(searchParams.toString())
@@ -113,27 +121,6 @@ function HomeContent() {
     imageUrl: issue.resolvedImageUrl,
   }))
 
-  if (view === 'user') {
-    return (
-      <UserProfile
-        issues={allIssues}
-        onBack={() => {
-          setView('map')
-          router.replace('/')
-        }}
-      />
-    )
-  }
-
-  if (view === 'issue-detail' && selectedIssueId) {
-    return (
-      <IssueDetail
-        issueId={selectedIssueId}
-        onBack={() => { setSelectedIssueId(null); setView('map') }}
-      />
-    )
-  }
-
   return (
     <div className="relative h-screen w-screen overflow-hidden">
       <TaskMap
@@ -143,34 +130,34 @@ function HomeContent() {
         onViewportChange={handleViewportChange}
       />
 
-      <Button
-        variant="secondary"
-        size="icon"
-        onClick={openProfileOrAuth}
-        className="absolute right-4 top-4 z-[1000] h-12 w-12 rounded-full shadow-lg bg-card border border-border"
-      >
-        <User className="h-5 w-5" />
-      </Button>
+      {showMapFloatingChrome && (
+        <>
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={openProfileOrAuth}
+            className="absolute right-4 top-4 z-[1000] h-12 w-12 rounded-full shadow-lg bg-card border border-border"
+          >
+            <User className="h-5 w-5" />
+          </Button>
 
-      {view === 'map' && (
-        <Button
-          variant="secondary"
-          size="icon"
-          onClick={() => mapRef.current?.centerOnUser()}
-          className="absolute bottom-8 right-4 z-[1000] h-12 w-12 rounded-full shadow-lg bg-card border border-border"
-        >
-          <LocateFixed className="h-5 w-5 text-primary" />
-        </Button>
-      )}
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={() => mapRef.current?.centerOnUser()}
+            className="absolute bottom-8 right-4 z-[1000] h-12 w-12 rounded-full shadow-lg bg-card border border-border"
+          >
+            <LocateFixed className="h-5 w-5 text-primary" />
+          </Button>
 
-      {view === 'map' && (
-        <Button
-          onClick={() => setView('photo')}
-          className="absolute bottom-8 left-1/2 z-[1000] h-14 w-14 -translate-x-1/2 rounded-full shadow-xl"
-          size="icon"
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
+          <Button
+            onClick={() => setView('photo')}
+            className="absolute bottom-8 left-1/2 z-[1000] h-14 w-14 -translate-x-1/2 rounded-full shadow-xl"
+            size="icon"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </>
       )}
 
       {view === 'photo' && (
@@ -196,6 +183,26 @@ function HomeContent() {
           onClose={closeAuthOverlay}
           onSignedIn={() => {
             window.location.href = '/?view=user'
+          }}
+        />
+      )}
+
+      {view === 'user' && (
+        <UserProfile
+          issues={allIssues}
+          onBack={() => {
+            setView('map')
+            router.replace('/')
+          }}
+        />
+      )}
+
+      {view === 'issue-detail' && selectedIssueId && (
+        <IssueDetail
+          issueId={selectedIssueId}
+          onBack={() => {
+            setSelectedIssueId(null)
+            setView('map')
           }}
         />
       )}

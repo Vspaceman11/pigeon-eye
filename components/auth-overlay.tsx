@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { formatAuthError } from '@/lib/format-auth-error'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MapOverlayShell } from '@/components/map-overlay-shell'
 
 type Flow = 'signIn' | 'signUp'
 
@@ -26,37 +26,16 @@ export function AuthOverlay({ initialFlow, onClose, onSignedIn }: AuthOverlayPro
     setStep(initialFlow)
   }, [initialFlow])
 
-  return (
-    <>
-      <button
-        type="button"
-        className="fixed inset-0 z-[1100] cursor-default bg-black/50 backdrop-blur-sm"
-        aria-label="Close"
-        onClick={onClose}
-      />
+  const title = step === 'signIn' ? 'Sign In' : 'Sign Up'
 
-      <div
-        className="fixed left-1/2 top-1/2 z-[1101] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="auth-overlay-title"
-      >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="space-y-1 text-center sm:text-left">
-            <h1 id="auth-overlay-title" className="text-2xl font-bold text-card-foreground">
-              {step === 'signIn' ? 'Sign In' : 'Sign Up'}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {step === 'signIn'
-                ? 'Sign in to your Pigeon-eye account'
-                : 'Create a new account to report city issues'}
-            </p>
-          </div>
-          <Button variant="ghost" size="icon" className="shrink-0" onClick={onClose} type="button">
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+  return (
+    <MapOverlayShell title={title} onClose={onClose}>
+      <div className="space-y-4 p-4">
+        <p className="text-sm text-muted-foreground">
+          {step === 'signIn'
+            ? 'Sign in to your Pigeon-eye account'
+            : 'Create a new account to report city issues'}
+        </p>
 
         <form
           className="space-y-4"
@@ -124,7 +103,7 @@ export function AuthOverlay({ initialFlow, onClose, onSignedIn }: AuthOverlayPro
           </Button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-muted-foreground">
+        <p className="text-center text-sm text-muted-foreground">
           {step === 'signIn' ? (
             <>
               Don&apos;t have an account?{' '}
@@ -150,6 +129,6 @@ export function AuthOverlay({ initialFlow, onClose, onSignedIn }: AuthOverlayPro
           )}
         </p>
       </div>
-    </>
+    </MapOverlayShell>
   )
 }
