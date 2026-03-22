@@ -20,10 +20,9 @@ const jwks = JSON.stringify({ keys: [{ use: "sig", ...publicKey }] });
 const keyPath = join(process.cwd(), ".convex-auth-key.pem");
 writeFileSync(keyPath, privateKey.trimEnd() + "\n", "utf8");
 
-// .env.auth: PEM newlines as \n (dotenv expands to real newlines in quoted values)
 const privateKeyEscaped = privateKey.trimEnd().replace(/\n/g, "\\n");
 const envAuth = `JWT_PRIVATE_KEY="${privateKeyEscaped}"
-JWKS=${JSON.stringify(jwks)}
+JWKS=${jwks}
 `;
 writeFileSync(join(process.cwd(), ".env.auth"), envAuth, "utf8");
 

@@ -26,15 +26,18 @@ interface UserProfileProps {
 
 export function UserProfile({ issues, onBack }: UserProfileProps) {
   const { signOut } = useAuthActions()
-  const { isLoading: authLoading } = useConvexAuth()
+  const { isLoading: authLoading, isAuthenticated: convexAuthenticated } = useConvexAuth()
   const currentUser = useQuery(api.users.currentUser)
   const userIssues = useQuery(
     api.issues.listByUser,
     currentUser ? { user_id: currentUser._id } : 'skip',
   ) ?? []
 
-  const isAuthenticated = currentUser != null
-  const isLoading = authLoading || currentUser === undefined
+  const isAuthenticated = convexAuthenticated && currentUser != null
+  const isLoading =
+    authLoading || (convexAuthenticated && currentUser === undefined)
+  const sessionWithoutUser =
+    !authLoading && convexAuthenticated && currentUser === null
   const displayIssues = isAuthenticated ? userIssues : issues
   const resolved = displayIssues.filter((i) => i.status === 'resolved' || i.status === 'approved').length
   const open = displayIssues.filter((i) => i.status === 'open').length
@@ -74,6 +77,14 @@ export function UserProfile({ issues, onBack }: UserProfileProps) {
             <div className="rounded-xl bg-card border border-border p-8 text-center text-muted-foreground">
               <div className="mx-auto mb-3 h-8 w-8 animate-pulse rounded bg-muted" />
               <p className="text-sm">Checking sign-in status…</p>
+            </div>
+          ) : sessionWithoutUser ? (
+            <div className="rounded-xl bg-card border border-border p-6 text-center text-sm text-muted-foreground">
+              <p className="font-medium text-destructive">Could not load your profile</p>
+              <p className="mt-2">Try signing out and signing in again.</p>
+              <Button type="button" variant="outline" className="mt-4" onClick={() => signOut()}>
+                Sign out
+              </Button>
             </div>
           ) : isAuthenticated ? (
             <>

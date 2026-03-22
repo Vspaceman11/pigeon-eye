@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { ConvexError } from 'convex/values'
+import { formatAuthError } from '@/lib/format-auth-error'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,13 +40,7 @@ export default function SignUpPage() {
                 return
               }
             } catch (err) {
-              const msg =
-                err instanceof ConvexError
-                  ? (err.data as { message?: string })?.message ?? String(err.data)
-                  : err instanceof Error
-                    ? err.message
-                    : 'Sign up failed'
-              setError(msg)
+              setError(formatAuthError(err))
             } finally {
               setLoading(false)
             }
