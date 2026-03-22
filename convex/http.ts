@@ -49,6 +49,30 @@ http.route({
     }
 
     try {
+      const resolved = await ctx.runQuery(internal.issues.resolveIssueForHttpPost, {
+        identifier: issueId,
+      });
+
+      if (resolved.kind === "by_convex_id" || resolved.kind === "by_issue_id") {
+        await ctx.runMutation(internal.issues.updateAnalysis, {
+          issueId: resolved.id,
+          severity: parseSeverity(body.severity),
+          category: optStr(body.category),
+          ai_description: optStr(body.ai_description),
+          priority_score: optNum(body.priority_score),
+          safety_concern: body.safety_concern === true ? true : undefined,
+          authority_type: optStr(body.authority_type),
+          address: optStr(body.address),
+          image_url: optStr(body.image_url),
+          status: parseStatusOptional(body.status),
+          n8nExecutionId: optStr(body.execution_id),
+        });
+        return new Response(
+          JSON.stringify({ success: true, id: resolved.id, merged: true }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
       const userResult = await ctx.runMutation(api.users.create, {
         name: rawUserId,
         email: rawUserId + "@pigeon-eye.local",
@@ -108,6 +132,40 @@ function optNum(val: unknown): number | undefined {
   return isNaN(n) ? undefined : n;
 }
 
+function parseSeverity(val: unknown): "EASY" | "MEDIUM" | "HIGH" | undefined {
+  if (val === "EASY" || val === "MEDIUM" || val === "HIGH") return val;
+  return undefined;
+}
+
+function parseStatusOptional(
+  val: unknown,
+):
+  | "open"
+  | "in_review"
+  | "approved"
+  | "rejected"
+  | "resolved"
+  | undefined {
+  if (
+    val === "open" ||
+    val === "in_review" ||
+    val === "approved" ||
+    val === "rejected" ||
+    val === "resolved"
+  ) {
+    return val;
+  }
+  return undefined;
+}
+
+http.route({
+  path: "/api/issues",
+  method: "OPTIONS",
+  handler: httpAction(async () => {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }),
+});
+
 // ── n8n callback: analysis results ───────────────────────
 
 http.route({
@@ -135,19 +193,32 @@ http.route({
       });
     }
 
-    const issueId = String(body.issue_id ?? "");
-    if (!issueId) {
+    const rawIssueId = String(body.issue_id ?? "");
+    if (!rawIssueId) {
       return new Response(
         JSON.stringify({ error: "issue_id is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
       );
     }
 
+    const resolved = await ctx.runQuery(internal.issues.resolveIssueForHttpPost, {
+      identifier: rawIssueId,
+    });
+
+    if (!resolved.id) {
+      return new Response(
+        JSON.stringify({ error: `Issue not found: ${rawIssueId}` }),
+        { status: 404, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
+    }
+
+    const issueId = resolved.id;
+
     const isError = body.error === true || typeof body.error_message === "string";
 
     if (isError) {
       await ctx.runMutation(internal.issues.markAnalysisError, {
-        issueId: issueId as never,
+        issueId,
         error: String(body.error_message ?? "Unknown n8n error"),
       });
       return new Response(JSON.stringify({ success: true, recorded: "error" }), {
@@ -158,7 +229,7 @@ http.route({
 
     try {
       await ctx.runMutation(internal.issues.updateAnalysis, {
-        issueId: issueId as never,
+        issueId,
         severity: parseSeverity(body.severity),
         category: optStr(body.category),
         ai_description: optStr(body.ai_description),
@@ -166,6 +237,7 @@ http.route({
         safety_concern: body.safety_concern === true ? true : undefined,
         authority_type: optStr(body.authority_type),
         address: optStr(body.address),
+        image_url: optStr(body.image_url),
         n8nExecutionId: optStr(body.execution_id),
       });
 
@@ -190,10 +262,5 @@ http.route({
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }),
 });
-
-function parseSeverity(val: unknown): "EASY" | "MEDIUM" | "HIGH" | undefined {
-  if (val === "EASY" || val === "MEDIUM" || val === "HIGH") return val;
-  return undefined;
-}
 
 export default http;
