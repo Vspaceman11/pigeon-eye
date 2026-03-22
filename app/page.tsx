@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useQuery } from 'convex/react'
+import { useConvexAuth, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
 import { User, Plus, LocateFixed } from 'lucide-react'
@@ -12,12 +12,14 @@ import { PhotoCapture } from '@/components/photo-capture'
 import { ReportForm } from '@/components/report-form'
 import { UserProfile } from '@/components/user-profile'
 import { IssueDetail } from '@/components/issue-detail'
+import { AuthOverlay } from '@/components/auth-overlay'
 
 type View = 'map' | 'photo' | 'report' | 'user' | 'issue-detail'
 
 function HomeContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { isLoading: authLoading, isAuthenticated } = useConvexAuth()
   const allIssues = useQuery(api.issues.list) ?? []
   const [viewport, setViewport] = useState<ViewportRadiusParams | null>(null)
   const nearbyIssues =
@@ -44,10 +46,34 @@ function HomeContent() {
   }, [])
 
   useEffect(() => {
-    if (searchParams.get('view') === 'user') {
-      setView('user')
+    if (searchParams.get('view') !== 'user') return
+    if (authLoading) return
+    if (!isAuthenticated) {
+      router.replace('/?auth=sign-in')
+      return
     }
-  }, [searchParams])
+    setView('user')
+  }, [searchParams, authLoading, isAuthenticated, router])
+
+  const openProfileOrAuth = useCallback(() => {
+    if (authLoading) return
+    if (!isAuthenticated) {
+      router.push('/?auth=sign-in')
+      return
+    }
+    setView('user')
+  }, [authLoading, isAuthenticated, router])
+
+  const authParam = searchParams.get('auth')
+  const showAuthOverlay =
+    view === 'map' && (authParam === 'sign-in' || authParam === 'sign-up')
+
+  const closeAuthOverlay = useCallback(() => {
+    const sp = new URLSearchParams(searchParams.toString())
+    sp.delete('auth')
+    const q = sp.toString()
+    router.replace(q ? `/?${q}` : '/')
+  }, [router, searchParams])
 
   const handlePhotoCapture = useCallback((file: File, previewUrl: string) => {
     setCapturedFile(file)
@@ -120,7 +146,7 @@ function HomeContent() {
       <Button
         variant="secondary"
         size="icon"
-        onClick={() => setView('user')}
+        onClick={openProfileOrAuth}
         className="absolute right-4 top-4 z-[1000] h-12 w-12 rounded-full shadow-lg bg-card border border-border"
       >
         <User className="h-5 w-5" />
@@ -161,6 +187,16 @@ function HomeContent() {
           previewUrl={capturedPreview}
           onBack={closeOverlay}
           onDone={handleReportDone}
+        />
+      )}
+
+      {showAuthOverlay && (
+        <AuthOverlay
+          initialFlow={authParam === 'sign-up' ? 'signUp' : 'signIn'}
+          onClose={closeAuthOverlay}
+          onSignedIn={() => {
+            window.location.href = '/?view=user'
+          }}
         />
       )}
     </div>

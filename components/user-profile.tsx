@@ -170,14 +170,14 @@ export function UserProfile({ issues, onBack }: UserProfileProps) {
           ) : (
             <div className="rounded-xl bg-card border border-border divide-y divide-border">
               <Link
-                href="/sign-in"
+                href="/?auth=sign-in"
                 className="flex w-full items-center gap-3 p-4 text-left hover:bg-muted/50 transition-colors"
               >
                 <User className="h-5 w-5 text-muted-foreground" />
                 <span className="text-card-foreground">Sign In</span>
               </Link>
               <Link
-                href="/sign-up"
+                href="/?auth=sign-up"
                 className="flex w-full items-center gap-3 p-4 text-left hover:bg-muted/50 transition-colors"
               >
                 <UserPlus className="h-5 w-5 text-muted-foreground" />
