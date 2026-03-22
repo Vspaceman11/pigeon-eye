@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 function generateCouponCode(): string {
@@ -19,11 +19,11 @@ export const redeemReward = mutation({
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.user_id);
-    if (!user) throw new Error("User not found");
+    if (!user) throw new ConvexError("User not found");
 
     if (user.total_points < args.points_cost) {
-      throw new Error(
-        `Insufficient points: ${user.total_points} available, ${args.points_cost} required`
+      throw new ConvexError(
+        `Not enough points: ${user.total_points} available, ${args.points_cost} required`
       );
     }
 
@@ -31,7 +31,7 @@ export const redeemReward = mutation({
     expiresAt.setDate(expiresAt.getDate() + 30);
 
     const code = generateCouponCode();
-    const id = await ctx.db.insert("coupons", {
+    await ctx.db.insert("coupons", {
       user_id: args.user_id,
       code,
       points_cost: args.points_cost,
@@ -46,7 +46,7 @@ export const redeemReward = mutation({
       total_points: user.total_points - args.points_cost,
     });
 
-    return { id, code };
+    return { code };
   },
 });
 

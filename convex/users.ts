@@ -129,3 +129,18 @@ export const getPoints = query({
     return { total_points: user.total_points };
   },
 });
+
+export const addDemoPoints = mutation({
+  args: {
+    id: v.id("users"),
+    points: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.id);
+    if (!user) throw new Error("User not found");
+    await ctx.db.patch(args.id, {
+      total_points: user.total_points + args.points,
+    });
+    return { total_points: user.total_points + args.points };
+  },
+});

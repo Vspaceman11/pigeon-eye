@@ -96,7 +96,12 @@ export function RewardsShop({ onBack }: RewardsShopProps) {
       })
       setShowQR({ code: result.code, reward })
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to redeem'
+      let msg = 'Failed to redeem'
+      if (err && typeof err === 'object' && 'data' in err) {
+        msg = String((err as { data: unknown }).data)
+      } else if (err instanceof Error) {
+        msg = err.message
+      }
       setError(msg)
     } finally {
       setRedeeming(null)
