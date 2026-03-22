@@ -7,7 +7,7 @@ import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
 import { User, Plus, LocateFixed } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { TaskMap, TaskMapHandle, type ViewportRadiusParams } from '@/components/task-map'
+import { TaskMap, TaskMapHandle } from '@/components/task-map'
 import { PhotoCapture } from '@/components/photo-capture'
 import { ReportForm } from '@/components/report-form'
 import { UserProfile } from '@/components/user-profile'
@@ -21,18 +21,6 @@ function HomeContent() {
   const searchParams = useSearchParams()
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth()
   const allIssues = useQuery(api.issues.list) ?? []
-  const [viewport, setViewport] = useState<ViewportRadiusParams | null>(null)
-  const nearbyIssues =
-    useQuery(
-      api.issues.listInRadius,
-      viewport
-        ? {
-            centerLat: viewport.centerLat,
-            centerLng: viewport.centerLng,
-            radiusMeters: viewport.radiusMeters,
-          }
-        : 'skip',
-    ) ?? []
 
   const [view, setView] = useState<View>('map')
   const [capturedFile, setCapturedFile] = useState<File | null>(null)
@@ -107,11 +95,7 @@ function HomeContent() {
     setView('map')
   }, [])
 
-  const handleViewportChange = useCallback((p: ViewportRadiusParams) => {
-    setViewport(p)
-  }, [])
-
-  const mapTasks = nearbyIssues.map((issue) => ({
+  const mapTasks = allIssues.map((issue) => ({
     id: issue._id,
     lat: issue.latitude ?? 49.1427,
     lng: issue.longitude ?? 9.2109,
@@ -123,12 +107,7 @@ function HomeContent() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
-      <TaskMap
-        ref={mapRef}
-        tasks={mapTasks}
-        onTaskClick={handleIssueClick}
-        onViewportChange={handleViewportChange}
-      />
+      <TaskMap ref={mapRef} tasks={mapTasks} onTaskClick={handleIssueClick} />
 
       {showMapFloatingChrome && (
         <>
