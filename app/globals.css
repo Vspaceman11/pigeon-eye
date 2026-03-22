@@ -42,7 +42,7 @@
   --sidebar-ring: #9d8af7;
   --map-canvas: #e8eaf0;
   /* Floating panels: subtle diagonal (matches issue-details sketch) */
-  --popup-panel-gradient: linear-gradient(135deg, #2c2e33 0%, #255049 100%);
+  --popup-panel-gradient: linear-gradient(135deg, #2c2e33 0%, #f9ffc3 100%);
 }
 
 .dark {
