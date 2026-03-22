@@ -5,6 +5,7 @@ import {
   internalQuery,
   internalMutation,
   action,
+  internalAction,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -462,6 +463,14 @@ export const updateAnalysis = internalMutation({
         });
       }
     }
+
+    const safetyConcernNow = fields.safety_concern === true;
+    const wasAlreadyGenerating = existing.escalation_letter_status != null;
+    if (safetyConcernNow && !wasAlreadyGenerating) {
+      await ctx.scheduler.runAfter(0, internal.issues.triggerLetterGeneration, {
+        issueId,
+      });
+    }
   },
 });
 
@@ -562,5 +571,245 @@ export const triggerN8nAnalysis = action({
         error: message,
       });
     }
+  },
+});
+
+// ── Escalation letter: mutations ─────────────────────────
+
+export const markLetterGenerating = internalMutation({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, { issueId }) => {
+    await ctx.db.patch(issueId, {
+      escalation_letter_status: "generating",
+      escalation_letter_error: undefined,
+    });
+  },
+});
+
+export const saveEscalationLetter = internalMutation({
+  args: {
+    issueId: v.id("issues"),
+    subject: v.string(),
+    body: v.string(),
+    to: v.optional(v.string()),
+    authority: v.optional(v.string()),
+  },
+  handler: async (ctx, { issueId, subject, body, to, authority }) => {
+    const issue = await ctx.db.get(issueId);
+    if (!issue) throw new Error(`Issue ${issueId} not found`);
+
+    await ctx.db.patch(issueId, {
+      escalation_letter_subject: subject,
+      escalation_letter_body: body,
+      escalation_letter_to: to,
+      escalation_letter_authority: authority,
+      escalation_letter_status: "draft",
+      escalation_letter_error: undefined,
+    });
+  },
+});
+
+export const markLetterError = internalMutation({
+  args: {
+    issueId: v.id("issues"),
+    error: v.string(),
+  },
+  handler: async (ctx, { issueId, error }) => {
+    await ctx.db.patch(issueId, {
+      escalation_letter_status: "error",
+      escalation_letter_error: error,
+    });
+  },
+});
+
+export const approveEscalationLetter = mutation({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, { issueId }) => {
+    const issue = await ctx.db.get(issueId);
+    if (!issue) throw new Error("Issue not found");
+    if (issue.escalation_letter_status !== "draft") {
+      throw new Error(`Cannot approve letter with status "${issue.escalation_letter_status}"`);
+    }
+
+    await ctx.db.patch(issueId, {
+      escalation_letter_status: "approved",
+    });
+  },
+});
+
+export const rejectEscalationLetter = mutation({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, { issueId }) => {
+    const issue = await ctx.db.get(issueId);
+    if (!issue) throw new Error("Issue not found");
+    if (issue.escalation_letter_status !== "draft") {
+      throw new Error(`Cannot reject letter with status "${issue.escalation_letter_status}"`);
+    }
+
+    await ctx.db.patch(issueId, {
+      escalation_letter_status: "rejected",
+    });
+  },
+});
+
+export const markLetterSent = internalMutation({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, { issueId }) => {
+    await ctx.db.patch(issueId, {
+      escalation_letter_status: "sent",
+    });
+  },
+});
+
+export const markLetterSending = internalMutation({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, { issueId }) => {
+    await ctx.db.patch(issueId, {
+      escalation_letter_status: "sending",
+    });
+  },
+});
+
+// ── Escalation letter: actions ───────────────────────────
+
+export const triggerLetterGeneration = internalAction({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, { issueId }) => {
+    const issue = await ctx.runQuery(internal.issues.getInternal, { issueId });
+    if (!issue) return;
+
+    await ctx.runMutation(internal.issues.markLetterGenerating, { issueId });
+
+    const webhookUrl = process.env.N8N_LETTER_WEBHOOK_URL;
+    if (!webhookUrl) {
+      await ctx.runMutation(internal.issues.markLetterError, {
+        issueId,
+        error: "N8N_LETTER_WEBHOOK_URL not configured",
+      });
+      return;
+    }
+
+    const webhookSecret = process.env.N8N_WEBHOOK_SECRET;
+    const convexSiteUrl = process.env.CONVEX_SITE_URL;
+
+    let imageUrl: string | null = null;
+    if (issue.storageId) {
+      imageUrl = await ctx.storage.getUrl(issue.storageId);
+    }
+
+    const payload = {
+      issue_id: issueId,
+      category: issue.category ?? "unknown",
+      severity: issue.severity,
+      ai_description: issue.ai_description ?? "",
+      user_description: issue.user_description ?? "",
+      address: issue.address ?? "Unknown",
+      latitude: issue.latitude,
+      longitude: issue.longitude,
+      authority_type: issue.authority_type ?? "general",
+      image_url: imageUrl ?? issue.image_url,
+      callback_url: convexSiteUrl
+        ? `${convexSiteUrl}/api/issues/escalation-letter`
+        : undefined,
+    };
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (webhookSecret) {
+      headers["Authorization"] = `Bearer ${webhookSecret}`;
+    }
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        await ctx.runMutation(internal.issues.markLetterError, {
+          issueId,
+          error: `n8n returned ${response.status}: ${text.slice(0, 200)}`,
+        });
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown fetch error";
+      await ctx.runMutation(internal.issues.markLetterError, {
+        issueId,
+        error: message,
+      });
+    }
+  },
+});
+
+export const sendApprovedLetter = action({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, { issueId }) => {
+    const issue = await ctx.runQuery(internal.issues.getInternal, { issueId });
+    if (!issue) throw new Error("Issue not found");
+    if (issue.escalation_letter_status !== "approved") {
+      throw new Error("Letter must be approved before sending");
+    }
+
+    await ctx.runMutation(internal.issues.markLetterSending, { issueId });
+
+    const webhookUrl = process.env.N8N_SEND_LETTER_WEBHOOK_URL;
+    if (!webhookUrl) {
+      await ctx.runMutation(internal.issues.markLetterError, {
+        issueId,
+        error: "N8N_SEND_LETTER_WEBHOOK_URL not configured",
+      });
+      return;
+    }
+
+    const webhookSecret = process.env.N8N_WEBHOOK_SECRET;
+    const payload = {
+      issue_id: issueId,
+      to: issue.escalation_letter_to,
+      authority: issue.escalation_letter_authority,
+      subject: issue.escalation_letter_subject,
+      body_html: issue.escalation_letter_body,
+    };
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (webhookSecret) {
+      headers["Authorization"] = `Bearer ${webhookSecret}`;
+    }
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        await ctx.runMutation(internal.issues.markLetterError, {
+          issueId,
+          error: `Send failed (${response.status}): ${text.slice(0, 200)}`,
+        });
+        return;
+      }
+
+      await ctx.runMutation(internal.issues.markLetterSent, { issueId });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown fetch error";
+      await ctx.runMutation(internal.issues.markLetterError, {
+        issueId,
+        error: message,
+      });
+    }
+  },
+});
+
+export const getInternal = internalQuery({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, { issueId }) => {
+    return await ctx.db.get(issueId);
   },
 });

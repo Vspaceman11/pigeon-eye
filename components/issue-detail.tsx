@@ -1,7 +1,7 @@
 'use client'
 
-import type { ReactNode } from 'react'
-import { useQuery, useAction } from 'convex/react'
+import { useState, type ReactNode } from 'react'
+import { useQuery, useAction, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
 import {
@@ -13,6 +13,10 @@ import {
   Tag,
   BarChart3,
   RefreshCw,
+  Mail,
+  Send,
+  X,
+  Building2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,6 +37,10 @@ const severityConfig = {
 export function IssueDetail({ issueId, onBack }: IssueDetailProps) {
   const issue = useQuery(api.issues.get, { id: issueId })
   const retryAnalysis = useAction(api.issues.triggerN8nAnalysis)
+  const approveLetter = useMutation(api.issues.approveEscalationLetter)
+  const rejectLetter = useMutation(api.issues.rejectEscalationLetter)
+  const sendLetter = useAction(api.issues.sendApprovedLetter)
+  const [letterActionPending, setLetterActionPending] = useState(false)
 
   let body: ReactNode
   if (issue === undefined) {
@@ -173,6 +181,30 @@ export function IssueDetail({ issueId, onBack }: IssueDetailProps) {
               )}
             </div>
 
+            <EscalationLetterSection
+              issue={issue}
+              letterActionPending={letterActionPending}
+              onApprove={async () => {
+                setLetterActionPending(true)
+                try {
+                  await approveLetter({ issueId: issue._id })
+                  await sendLetter({ issueId: issue._id })
+                } catch {
+                  // Error states are handled via Convex reactive data
+                } finally {
+                  setLetterActionPending(false)
+                }
+              }}
+              onReject={async () => {
+                setLetterActionPending(true)
+                try {
+                  await rejectLetter({ issueId: issue._id })
+                } finally {
+                  setLetterActionPending(false)
+                }
+              }}
+            />
+
             {issue.user_description && (
               <div className="rounded-lg border border-border/80 bg-field p-3">
                 <p className="mb-1 text-xs font-medium text-muted-foreground">User Description</p>
@@ -199,4 +231,177 @@ export function IssueDetail({ issueId, onBack }: IssueDetailProps) {
       {body}
     </MapOverlayShell>
   )
+}
+
+// ── Escalation letter sub-component ──────────────────────
+
+interface EscalationLetterSectionProps {
+  issue: {
+    escalation_letter_status?: string
+    escalation_letter_subject?: string
+    escalation_letter_body?: string
+    escalation_letter_to?: string
+    escalation_letter_authority?: string
+    escalation_letter_error?: string
+    safety_concern?: boolean
+  }
+  letterActionPending: boolean
+  onApprove: () => void
+  onReject: () => void
+}
+
+function EscalationLetterSection({
+  issue,
+  letterActionPending,
+  onApprove,
+  onReject,
+}: EscalationLetterSectionProps) {
+  const status = issue.escalation_letter_status
+  if (!issue.safety_concern && !status) return null
+
+  if (status === 'generating') {
+    return (
+      <div className="mt-2 rounded-xl border border-amber-500/25 bg-amber-950/20 p-4">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-amber-400" />
+          <div>
+            <p className="font-medium text-amber-200">Generating letter to authorities…</p>
+            <p className="text-sm text-amber-200/60">
+              AI is composing a formal letter based on the safety concern
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'draft') {
+    return (
+      <div className="mt-2 space-y-3 rounded-xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-card p-4">
+        <div className="flex items-center gap-2">
+          <Mail className="h-5 w-5 text-amber-400" />
+          <h3 className="font-semibold text-amber-200">Review Letter Before Sending</h3>
+        </div>
+
+        {issue.escalation_letter_authority && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Building2 className="h-4 w-4 shrink-0" />
+            <span>{issue.escalation_letter_authority}</span>
+            {issue.escalation_letter_to && (
+              <span className="text-xs opacity-70">({issue.escalation_letter_to})</span>
+            )}
+          </div>
+        )}
+
+        {issue.escalation_letter_subject && (
+          <div className="rounded-lg border border-border/60 bg-field px-3 py-2">
+            <p className="text-xs font-medium text-muted-foreground">Subject</p>
+            <p className="text-sm font-medium text-field-foreground">
+              {issue.escalation_letter_subject}
+            </p>
+          </div>
+        )}
+
+        {issue.escalation_letter_body && (
+          <div className="max-h-[40vh] overflow-y-auto rounded-lg border border-border/60 bg-field px-3 py-2">
+            <div
+              className="prose prose-sm prose-invert max-w-none text-field-foreground
+                [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5 [&_strong]:text-card-foreground"
+              dangerouslySetInnerHTML={{ __html: issue.escalation_letter_body }}
+            />
+          </div>
+        )}
+
+        <p className="text-sm text-amber-200/80">
+          Would you like to send this letter to the municipal authorities?
+        </p>
+
+        <div className="flex gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onApprove}
+            disabled={letterActionPending}
+            className="flex-1 bg-amber-600 hover:bg-amber-500 text-white"
+          >
+            {letterActionPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="mr-2 h-4 w-4" />
+            )}
+            Send Letter
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onReject}
+            disabled={letterActionPending}
+            className="flex-1"
+          >
+            <X className="mr-2 h-4 w-4" />
+            Don't Send
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'approved' || status === 'sending') {
+    return (
+      <div className="mt-2 rounded-xl border border-amber-500/25 bg-amber-950/20 p-4">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-amber-400" />
+          <p className="font-medium text-amber-200">Sending letter…</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'sent') {
+    return (
+      <div className="mt-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+          <div>
+            <p className="font-medium text-emerald-200">Letter sent to authorities</p>
+            <p className="text-sm text-emerald-200/60">The letter has been sent successfully</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'rejected') {
+    return (
+      <div className="mt-2 rounded-xl border border-border/50 bg-muted/30 p-4">
+        <div className="flex items-center gap-2">
+          <X className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <p className="font-medium text-muted-foreground">Letter not sent</p>
+            <p className="text-sm text-muted-foreground/60">
+              You chose not to send this letter
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="mt-2 rounded-xl border border-red-500/30 bg-red-950/20 p-4">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-red-400" />
+          <div>
+            <p className="font-medium text-red-200">Letter generation failed</p>
+            {issue.escalation_letter_error && (
+              <p className="text-sm text-red-200/60">{issue.escalation_letter_error}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return null
 }
