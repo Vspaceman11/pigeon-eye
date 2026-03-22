@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
-import { User, Plus, LocateFixed } from 'lucide-react'
+import { User, Plus, LocateFixed, Gift } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TaskMap, TaskMapHandle } from '@/components/task-map'
 import { PhotoCapture } from '@/components/photo-capture'
@@ -13,8 +13,9 @@ import { ReportForm } from '@/components/report-form'
 import { UserProfile } from '@/components/user-profile'
 import { IssueDetail } from '@/components/issue-detail'
 import { AuthOverlay } from '@/components/auth-overlay'
+import { RewardsShop } from '@/components/rewards-shop'
 
-type View = 'map' | 'photo' | 'report' | 'user' | 'issue-detail'
+type View = 'map' | 'photo' | 'report' | 'user' | 'issue-detail' | 'rewards'
 
 function HomeContent() {
   const router = useRouter()
@@ -123,6 +124,21 @@ function HomeContent() {
           <Button
             variant="secondary"
             size="icon"
+            onClick={() => {
+              if (!isAuthenticated) {
+                router.push('/?auth=sign-in')
+                return
+              }
+              setView('rewards')
+            }}
+            className="absolute right-4 top-20 z-[1000] h-12 w-12 rounded-full shadow-lg bg-card border border-border"
+          >
+            <Gift className="h-5 w-5 text-amber-500" />
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="icon"
             onClick={() => mapRef.current?.centerOnUser()}
             className="absolute bottom-8 right-4 z-[1000] h-12 w-12 rounded-full shadow-lg bg-card border border-border"
           >
@@ -193,6 +209,10 @@ function HomeContent() {
             setView('map')
           }}
         />
+      )}
+
+      {view === 'rewards' && (
+        <RewardsShop onBack={() => setView('map')} />
       )}
     </div>
   )

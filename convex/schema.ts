@@ -62,10 +62,11 @@ export default defineSchema({
 
   coupons: defineTable({
     user_id: v.id("users"),
-    issue_id: v.id("issues"),
+    issue_id: v.optional(v.id("issues")),
     code: v.string(),
     points_cost: v.number(),
     discount_percent: v.number(),
+    reward_name: v.optional(v.string()),
     status: v.union(v.literal("active"), v.literal("redeemed"), v.literal("expired")),
     expires_at: v.string(),
     redeemed_at: v.optional(v.string()),

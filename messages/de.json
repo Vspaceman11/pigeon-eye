@@ -136,6 +136,24 @@
     "other": "Sonstiges",
     "pendingAnalysis": "Analyse ausstehend"
   },
+  "rewards": {
+    "title": "Belohnungen",
+    "yourBalance": "Dein Guthaben",
+    "points": "Punkte",
+    "redeem": "Einlösen",
+    "moreNeeded": "mehr",
+    "myCoupons": "Meine Gutscheine",
+    "signInRequired": "Melde dich an, um Belohnungen zu sehen",
+    "earnPoints": "Sammle Punkte, indem du Stadtprobleme meldest",
+    "showQR": "Zeige diesen QR-Code am Standort",
+    "coffee": "15% Rabatt auf Kaffee",
+    "coffeeDesc": "Rabatt im Café Botanik, Heilbronn Marktplatz",
+    "fruits": "10% Rabatt auf Obst",
+    "fruitsDesc": "Frisches Obst bei REWE, Kaiserstraße",
+    "exclusive": "City Hero Abzeichen",
+    "exclusiveDesc": "Exklusives Pigeon-eye Gold-Abzeichen + 20% in der Stadtgalerie",
+    "discount": "Rabatt"
+  },
   "status": {
     "open": "Offen",
     "resolved": "Gelöst"

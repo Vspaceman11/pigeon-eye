@@ -10,6 +10,46 @@ function generateCouponCode(): string {
   return code;
 }
 
+export const redeemReward = mutation({
+  args: {
+    user_id: v.id("users"),
+    reward_name: v.string(),
+    discount_percent: v.number(),
+    points_cost: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.user_id);
+    if (!user) throw new Error("User not found");
+
+    if (user.total_points < args.points_cost) {
+      throw new Error(
+        `Insufficient points: ${user.total_points} available, ${args.points_cost} required`
+      );
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    const code = generateCouponCode();
+    const id = await ctx.db.insert("coupons", {
+      user_id: args.user_id,
+      code,
+      points_cost: args.points_cost,
+      discount_percent: args.discount_percent,
+      reward_name: args.reward_name,
+      status: "active",
+      expires_at: expiresAt.toISOString(),
+      created_at: new Date().toISOString(),
+    });
+
+    await ctx.db.patch(args.user_id, {
+      total_points: user.total_points - args.points_cost,
+    });
+
+    return { id, code };
+  },
+});
+
 export const issueForApprovedReport = mutation({
   args: {
     user_id: v.id("users"),
@@ -41,10 +81,11 @@ export const issueForApprovedReport = mutation({
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + daysValid);
 
+    const code = generateCouponCode();
     const id = await ctx.db.insert("coupons", {
       user_id: args.user_id,
       issue_id: args.issue_id,
-      code: generateCouponCode(),
+      code,
       points_cost: args.points_cost,
       discount_percent: args.discount_percent,
       status: "active",
@@ -56,7 +97,7 @@ export const issueForApprovedReport = mutation({
       total_points: user.total_points - args.points_cost,
     });
 
-    return { id, code: (await ctx.db.get(id))!.code };
+    return { id, code };
   },
 });
 

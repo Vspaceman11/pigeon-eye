@@ -136,6 +136,24 @@
     "other": "Other",
     "pendingAnalysis": "Pending analysis"
   },
+  "rewards": {
+    "title": "Rewards",
+    "yourBalance": "Your Balance",
+    "points": "points",
+    "redeem": "Redeem",
+    "moreNeeded": "more",
+    "myCoupons": "My Coupons",
+    "signInRequired": "Sign in to access rewards",
+    "earnPoints": "Earn points by reporting city issues",
+    "showQR": "Show this QR code at the location",
+    "coffee": "15% off Coffee",
+    "coffeeDesc": "Discount at Café Botanik, Heilbronn Marktplatz",
+    "fruits": "10% off Fruits",
+    "fruitsDesc": "Fresh fruits at REWE, Kaiserstraße",
+    "exclusive": "City Hero Badge",
+    "exclusiveDesc": "Exclusive Pigeon-eye golden badge + 20% at Stadtgalerie",
+    "discount": "discount"
+  },
   "status": {
     "open": "Open",
     "resolved": "Resolved"
