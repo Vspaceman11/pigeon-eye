@@ -7,9 +7,73 @@ import {
   action,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 
 const POINTS_BY_SEVERITY = { EASY: 5, MEDIUM: 10, HIGH: 20 } as const;
+
+/**
+ * When ingest sends issue_id = Convex document id of an existing row (n8n forwards webhook id),
+ * merge into that row instead of inserting a duplicate. Keeps reporter user_id, coords, storageId,
+ * and business issue_id (e.g. upload-…); ignores payload user_id for ownership/points.
+ */
+async function mergeIngestIntoIssueByConvexDocId(
+  ctx: MutationCtx,
+  targetId: Id<"issues">,
+  args: {
+    severity: "EASY" | "MEDIUM" | "HIGH";
+    status: "open" | "in_review" | "approved" | "rejected" | "resolved";
+    category?: string;
+    ai_description?: string;
+    user_description?: string;
+    address?: string;
+    image_url?: string;
+    priority_score: number;
+    authority_type?: string;
+    safety_concern?: boolean;
+    processed_at: string;
+  },
+) {
+  const existing = await ctx.db.get(targetId);
+  if (!existing) return null;
+
+  const points = POINTS_BY_SEVERITY[args.severity];
+  const pointsDelta = points - existing.points_awarded;
+
+  await ctx.db.patch(targetId, {
+    severity: args.severity,
+    status: args.status,
+    category: args.category ?? existing.category,
+    ai_description: args.ai_description ?? existing.ai_description,
+    user_description:
+      args.user_description !== undefined
+        ? args.user_description
+        : existing.user_description,
+    address: args.address ?? existing.address,
+    image_url: args.image_url ?? existing.image_url,
+    priority_score: args.priority_score,
+    authority_type: args.authority_type ?? existing.authority_type,
+    safety_concern:
+      args.safety_concern !== undefined
+        ? args.safety_concern
+        : existing.safety_concern,
+    processed_at: args.processed_at,
+    points_awarded: points,
+    analysisStatus: "done",
+    analysisError: undefined,
+  });
+
+  if (pointsDelta !== 0) {
+    const user = await ctx.db.get(existing.user_id);
+    if (user) {
+      await ctx.db.patch(existing.user_id, {
+        total_points: user.total_points + pointsDelta,
+      });
+    }
+  }
+
+  return { id: targetId, points_awarded: points };
+}
 
 export const create = mutation({
   args: {
@@ -37,6 +101,38 @@ export const create = mutation({
     processed_at: v.string(),
   },
   handler: async (ctx, args) => {
+    let existingByConvexId: Doc<"issues"> | null = null;
+    try {
+      const row = await ctx.db.get(args.issue_id as Id<"issues">);
+      if (row) existingByConvexId = row;
+    } catch {
+      // args.issue_id is not a valid Convex id
+    }
+
+    if (existingByConvexId) {
+      const merged = await mergeIngestIntoIssueByConvexDocId(ctx, existingByConvexId._id, {
+        severity: args.severity,
+        status: args.status,
+        category: args.category,
+        ai_description: args.ai_description,
+        user_description: args.user_description,
+        address: args.address,
+        image_url: args.image_url,
+        priority_score: args.priority_score,
+        authority_type: args.authority_type,
+        safety_concern: args.safety_concern,
+        processed_at: args.processed_at,
+      });
+      if (merged) {
+        return {
+          id: merged.id,
+          deduplicated: false,
+          merged: true,
+          points_awarded: merged.points_awarded,
+        };
+      }
+    }
+
     const existing = await ctx.db
       .query("issues")
       .withIndex("by_issue_id", (q) => q.eq("issue_id", args.issue_id))
