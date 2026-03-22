@@ -9,6 +9,7 @@ const nextConfig = {
   env: {
     CONVEX_URL: process.env.CONVEX_URL,
   },
+  allowedDevOrigins: ['172.17.252.94'],
 }
 
 export default nextConfig
