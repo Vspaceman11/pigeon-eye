@@ -23,19 +23,52 @@ export function PhotoCapture({ onPhotoCapture, onClose, autoStart = false }: Pho
 
   const startCamera = useCallback(async () => {
     if (streamRef.current) return
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('Camera API not supported in this browser.')
+      return
+    }
+    if (!window.isSecureContext) {
+      setError('Camera requires HTTPS or localhost. Use file upload when testing over HTTP.')
+      return
+    }
+
+    setError(null)
+    const constraints: MediaStreamConstraints = { video: { facingMode: 'environment' }, audio: false }
+
     try {
-      setError(null)
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      })
-      streamRef.current = mediaStream
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      streamRef.current = stream
       setIsCameraActive(true)
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream
+    } catch (err) {
+      // Fallback: try user-facing camera (e.g. laptop webcam) when environment fails
+      if (
+        err instanceof DOMException &&
+        (err.name === 'OverconstrainedError' || err.name === 'NotFoundError')
+      ) {
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' },
+            audio: false,
+          })
+          streamRef.current = fallbackStream
+          setIsCameraActive(true)
+          return
+        } catch {
+          /* fall through to error */
+        }
       }
-    } catch {
-      setError('Camera not available. Please use file upload.')
+
+      const msg =
+        err instanceof DOMException
+          ? err.name === 'NotAllowedError'
+            ? 'Camera permission denied. Allow access and try again.'
+            : err.name === 'NotFoundError'
+              ? 'No camera found. Use file upload.'
+              : err.name === 'SecurityError' || err.name === 'NotSupportedError'
+                ? 'Camera blocked. Use HTTPS or localhost.'
+                : `${err.name}: ${err.message}`
+          : 'Camera not available. Please use file upload.'
+      setError(msg)
     }
   }, [])
 
@@ -44,6 +77,15 @@ export function PhotoCapture({ onPhotoCapture, onClose, autoStart = false }: Pho
       startCamera()
     }
   }, [autoStart, startCamera])
+
+  // Attach stream to video element once both exist (video mounts after isCameraActive)
+  useEffect(() => {
+    if (!isCameraActive || !streamRef.current || !videoRef.current) return
+    videoRef.current.srcObject = streamRef.current
+    return () => {
+      if (videoRef.current) videoRef.current.srcObject = null
+    }
+  }, [isCameraActive])
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -96,6 +138,11 @@ export function PhotoCapture({ onPhotoCapture, onClose, autoStart = false }: Pho
     }
   }
 
+  const handleCancel = useCallback(() => {
+    stopCamera()
+    onClose()
+  }, [stopCamera, onClose])
+
   return (
     <>
       <div
@@ -103,30 +150,36 @@ export function PhotoCapture({ onPhotoCapture, onClose, autoStart = false }: Pho
         onClick={() => { stopCamera(); onClose() }}
       />
 
-      <div className="fixed bottom-0 left-0 right-0 z-[1002] rounded-t-2xl bg-card border-t border-border shadow-2xl">
-        <div className="flex justify-center pt-3 pb-1">
+      <div className="fixed bottom-0 left-0 right-0 z-[1002] flex h-[92vh] max-h-[92vh] flex-col rounded-t-2xl bg-card border-t border-border shadow-2xl">
+        <div className="flex shrink-0 justify-center pt-3 pb-1">
           <div className="h-1 w-10 rounded-full bg-muted-foreground/30" />
         </div>
 
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-lg font-semibold text-card-foreground">Add Photo</h2>
           <Button variant="ghost" size="icon" onClick={() => { stopCamera(); onClose() }}>
             <X className="h-5 w-5" />
           </Button>
         </div>
 
-        <div className="p-4 pb-8">
+        <div className="flex min-h-0 flex-1 flex-col p-4 pb-8">
           {error && (
-            <div className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="mb-4 shrink-0 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
               {error}
             </div>
           )}
 
-          <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
+          <div className="relative min-h-[200px] min-w-0 flex-1 overflow-hidden rounded-xl bg-muted">
             {previewUrl ? (
               <img src={previewUrl} alt="Captured" className="h-full w-full object-cover" />
             ) : isCameraActive ? (
-              <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="h-full w-full object-contain"
+              />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
                 <Camera className="h-16 w-16" />
@@ -137,34 +190,39 @@ export function PhotoCapture({ onPhotoCapture, onClose, autoStart = false }: Pho
 
           <canvas ref={canvasRef} className="hidden" />
 
-          <div className="mt-4 flex gap-3">
-            {capturedFile ? (
-              <>
-                <Button variant="outline" className="flex-1" onClick={retakePhoto}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Retake
-                </Button>
-                <Button className="flex-1" onClick={confirmPhoto}>
-                  Use Photo
-                </Button>
-              </>
-            ) : isCameraActive ? (
-              <Button className="flex-1" onClick={capturePhoto}>
-                <Camera className="mr-2 h-4 w-4" />
-                Capture
-              </Button>
-            ) : (
-              <>
-                <Button variant="outline" className="flex-1" onClick={startCamera}>
+          <div className="mt-4 shrink-0 space-y-3">
+            <div className="flex gap-3">
+              {capturedFile ? (
+                <>
+                  <Button variant="outline" className="flex-1" onClick={retakePhoto}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Retake
+                  </Button>
+                  <Button className="flex-1" onClick={confirmPhoto}>
+                    Use Photo
+                  </Button>
+                </>
+              ) : isCameraActive ? (
+                <Button className="w-full" onClick={capturePhoto}>
                   <Camera className="mr-2 h-4 w-4" />
-                  Camera
+                  Capture
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload
-                </Button>
-              </>
-            )}
+              ) : (
+                <>
+                  <Button variant="outline" className="flex-1" onClick={startCamera}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Camera
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload
+                  </Button>
+                </>
+              )}
+            </div>
+            <Button variant="outline" className="w-full" type="button" onClick={handleCancel}>
+              Cancel
+            </Button>
           </div>
 
           <input

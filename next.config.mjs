@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: ['copyrights-islands-express-man.trycloudflare.com'],
   typescript: {
     ignoreBuildErrors: true,
   },

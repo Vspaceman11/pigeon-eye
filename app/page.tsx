@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
 import { User, Plus, LocateFixed } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { TaskMap, TaskMapHandle } from '@/components/task-map'
+import { TaskMap, TaskMapHandle, type ViewportRadiusParams } from '@/components/task-map'
 import { PhotoCapture } from '@/components/photo-capture'
 import { ReportForm } from '@/components/report-form'
 import { UserProfile } from '@/components/user-profile'
@@ -14,8 +15,22 @@ import { IssueDetail } from '@/components/issue-detail'
 
 type View = 'map' | 'photo' | 'report' | 'user' | 'issue-detail'
 
-export default function Home() {
-  const issues = useQuery(api.issues.list) ?? []
+function HomeContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const allIssues = useQuery(api.issues.list) ?? []
+  const [viewport, setViewport] = useState<ViewportRadiusParams | null>(null)
+  const nearbyIssues =
+    useQuery(
+      api.issues.listInRadius,
+      viewport
+        ? {
+            centerLat: viewport.centerLat,
+            centerLng: viewport.centerLng,
+            radiusMeters: viewport.radiusMeters,
+          }
+        : 'skip',
+    ) ?? []
 
   const [view, setView] = useState<View>('map')
   const [capturedFile, setCapturedFile] = useState<File | null>(null)
@@ -27,6 +42,12 @@ export default function Home() {
   useEffect(() => {
     setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
   }, [])
+
+  useEffect(() => {
+    if (searchParams.get('view') === 'user') {
+      setView('user')
+    }
+  }, [searchParams])
 
   const handlePhotoCapture = useCallback((file: File, previewUrl: string) => {
     setCapturedFile(file)
@@ -41,8 +62,8 @@ export default function Home() {
     setView('issue-detail')
   }, [])
 
-  const handleIssueClick = useCallback((id: Id<"issues">) => {
-    setSelectedIssueId(id)
+  const handleIssueClick = useCallback((id: string) => {
+    setSelectedIssueId(id as Id<"issues">)
     setView('issue-detail')
   }, [])
 
@@ -52,7 +73,11 @@ export default function Home() {
     setView('map')
   }, [])
 
-  const mapTasks = issues.map((issue) => ({
+  const handleViewportChange = useCallback((p: ViewportRadiusParams) => {
+    setViewport(p)
+  }, [])
+
+  const mapTasks = nearbyIssues.map((issue) => ({
     id: issue._id,
     lat: issue.latitude ?? 49.1427,
     lng: issue.longitude ?? 9.2109,
@@ -63,7 +88,15 @@ export default function Home() {
   }))
 
   if (view === 'user') {
-    return <UserProfile issues={issues} onBack={() => setView('map')} />
+    return (
+      <UserProfile
+        issues={allIssues}
+        onBack={() => {
+          setView('map')
+          router.replace('/')
+        }}
+      />
+    )
   }
 
   if (view === 'issue-detail' && selectedIssueId) {
@@ -77,7 +110,12 @@ export default function Home() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
-      <TaskMap ref={mapRef} tasks={mapTasks} onTaskClick={handleIssueClick} />
+      <TaskMap
+        ref={mapRef}
+        tasks={mapTasks}
+        onTaskClick={handleIssueClick}
+        onViewportChange={handleViewportChange}
+      />
 
       <Button
         variant="secondary"
@@ -126,5 +164,13 @@ export default function Home() {
         />
       )}
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center">Loading…</div>}>
+      <HomeContent />
+    </Suspense>
   )
 }

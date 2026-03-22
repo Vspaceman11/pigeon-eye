@@ -21,6 +21,18 @@ npx convex dev
 npm run dev
 ```
 
+### Convex Auth (sign-in / sign-up)
+
+JWT keys must live on the **Convex** deployment (not only in `.env.local`):
+
+```bash
+npm run auth:keys
+npx convex env set --from-file .env.auth
+# If variables already exist: npx convex env set --from-file .env.auth --force
+```
+
+In the Convex dashboard, ensure **`CONVEX_SITE_URL`** is set to your site URL (e.g. `https://<deployment>.convex.site`). Then restart `npx convex dev`.
+
 ## Environment
 
 | Variable | Where | Purpose |
